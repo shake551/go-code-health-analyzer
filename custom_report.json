@@ -1,0 +1,233 @@
+{
+  "packages": [
+    {
+      "name": "main",
+      "path": "",
+      "afferent": 0,
+      "efferent": 2,
+      "instability": 1,
+      "structs": null,
+      "functions": [
+        {
+          "function_name": "main",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go",
+          "complexity": 13
+        },
+        {
+          "function_name": "generateHTML",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "generateJSON",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "printSummary",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go",
+          "complexity": 2
+        },
+        {
+          "function_name": "printUsage",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go",
+          "complexity": 1
+        }
+      ]
+    },
+    {
+      "name": "analyzer",
+      "path": "analyzer",
+      "afferent": 2,
+      "efferent": 0,
+      "instability": 0,
+      "structs": [
+        {
+          "struct_name": "ParsedPackage",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "PackageDependency",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "CouplingMetrics",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "methodInfo",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "Report",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "PackageResult",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "StructResult",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "FunctionResult",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go",
+          "lcom4_score": 1,
+          "component_details": []
+        }
+      ],
+      "functions": [
+        {
+          "function_name": "Analyze",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "parsePackages",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go",
+          "complexity": 10
+        },
+        {
+          "function_name": "buildDependencyGraph",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go",
+          "complexity": 9
+        },
+        {
+          "function_name": "determineProjectPrefix",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "CalculateComplexity",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/complexity.go",
+          "complexity": 10
+        },
+        {
+          "function_name": "calculateFunctionComplexity",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/complexity.go",
+          "complexity": 14
+        },
+        {
+          "function_name": "CalculateCoupling",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go",
+          "complexity": 7
+        },
+        {
+          "function_name": "ExtractImports",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "CalculateLCOM4",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "calculateStructLCOM4",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 3
+        },
+        {
+          "function_name": "extractFields",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "extractMethods",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 9
+        },
+        {
+          "function_name": "findUsedFields",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "buildMethodGraph",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 4
+        },
+        {
+          "function_name": "shareFields",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 3
+        },
+        {
+          "function_name": "findConnectedComponents",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 3
+        },
+        {
+          "function_name": "dfs",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go",
+          "complexity": 3
+        }
+      ]
+    },
+    {
+      "name": "reporter",
+      "path": "reporter",
+      "afferent": 1,
+      "efferent": 1,
+      "instability": 0.5,
+      "structs": [
+        {
+          "struct_name": "TemplateData",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "Summary",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "StructWithPackage",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "lcom4_score": 1,
+          "component_details": []
+        },
+        {
+          "struct_name": "FunctionWithPackage",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "lcom4_score": 1,
+          "component_details": []
+        }
+      ],
+      "functions": [
+        {
+          "function_name": "GenerateJSONReport",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/json.go",
+          "complexity": 3
+        },
+        {
+          "function_name": "GenerateHTMLReport",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "complexity": 10
+        },
+        {
+          "function_name": "prepareTemplateData",
+          "file_path": "/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go",
+          "complexity": 10
+        }
+      ]
+    }
+  ]
+}

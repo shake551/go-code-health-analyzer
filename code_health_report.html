@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Code Health Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .green { background-color: #d1fae5; }
+        .yellow { background-color: #fef3c7; }
+        .red { background-color: #fee2e2; }
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+        .section { display: none; }
+        .section.active { display: block; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background-color: #f9fafb; font-weight: 600; cursor: pointer; user-select: none; }
+        th:hover { background-color: #f3f4f6; }
+        tr:hover { background-color: #f9fafb; }
+        .sort-icon { margin-left: 5px; opacity: 0.3; }
+        .sort-icon.active { opacity: 1; }
+        .clickable-row { cursor: pointer; }
+        .details-row { display: none; background-color: #f9fafb; }
+        .details-row.show { display: table-row; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Go Code Health Report</h1>
+            <p class="text-gray-600">Comprehensive code quality analysis including LCOM4, Cyclomatic Complexity, and Coupling metrics</p>
+        </header>
+
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Summary</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">3</div>
+                    <div class="text-sm text-gray-600">Packages</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">14</div>
+                    <div class="text-sm text-gray-600">Structs</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">31</div>
+                    <div class="text-sm text-gray-600">Functions</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-600">0</div>
+                    <div class="text-sm text-gray-600">Critical Issues</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-yellow-600">1</div>
+                    <div class="text-sm text-gray-600">Warnings</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">0</div>
+                    <div class="text-sm text-gray-600">High LCOM4 (>2)</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">1</div>
+                    <div class="text-sm text-gray-600">High Complexity (>15)</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">1</div>
+                    <div class="text-sm text-gray-600">High Instability (>0.7)</div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="bg-white rounded-lg shadow-md mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="flex">
+                    <button class="tab-button px-6 py-4 tab-active" data-tab="diagnostics">Diagnostics</button>
+                    <button class="tab-button px-6 py-4" data-tab="coupling">Package Coupling</button>
+                    <button class="tab-button px-6 py-4" data-tab="cohesion">Struct Cohesion (LCOM4)</button>
+                    <button class="tab-button px-6 py-4" data-tab="complexity">Function Complexity</button>
+                </nav>
+            </div>
+
+            
+            <div id="diagnostics" class="section active p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Code Health Diagnostics</h2>
+                <p class="text-gray-600 mb-4">
+                    Integrated analysis results detecting anti-patterns and code smells by combining multiple metrics.
+                </p>
+                
+                <div class="space-y-4">
+                    
+                    <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                
+                                <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-lg font-semibold text-yellow-800">
+                                    Overly Complex Function: main.main
+                                </h3>
+                                <p class="mt-2 text-sm text-yellow-700">
+                                    Function &#39;main&#39; is too complex (Complexity=16). High complexity makes code hard to test and maintain. Consider refactoring into smaller functions.
+                                </p>
+                                <div class="mt-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Warning
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+
+            
+            <div id="coupling" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Package Coupling</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>Ca (Afferent Coupling):</strong> Number of packages that depend on this package<br>
+                    <strong>Ce (Efferent Coupling):</strong> Number of packages this package depends on<br>
+                    <strong>Instability (I):</strong> Ce / (Ca + Ce) - measures how stable a package is
+                </p>
+                <div class="overflow-x-auto">
+                    <table id="coupling-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('coupling-table', 0)" data-sort-dir="asc">Package Name<span class="sort-icon active">▲</span></th>
+                                <th onclick="sortTable('coupling-table', 1)">Package Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 2)">Ca<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 3)">Ce<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 4)">Instability<span class="sort-icon">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td class="text-gray-600">analyzer</td>
+                                <td>2</td>
+                                <td>0</td>
+                                <td>0.000</td>
+                            </tr>
+                            
+                            <tr class="red" data-package="">
+                                <td class="font-medium">main</td>
+                                <td class="text-gray-600"></td>
+                                <td>0</td>
+                                <td>2</td>
+                                <td>1.000</td>
+                            </tr>
+                            
+                            <tr class="yellow" data-package="reporter">
+                                <td class="font-medium">reporter</td>
+                                <td class="text-gray-600">reporter</td>
+                                <td>1</td>
+                                <td>1</td>
+                                <td>0.500</td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            
+            <div id="cohesion" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Struct Cohesion (LCOM4)</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>LCOM4:</strong> Lack of Cohesion of Methods - measures how well the responsibilities of a struct are focused<br>
+                    Lower scores are better: 1 is ideal, higher values indicate the struct may have multiple responsibilities
+                </p>
+                <div class="mb-4">
+                    <label class="text-sm font-medium text-gray-700 mr-2">Filter by Package:</label>
+                    <select id="struct-package-filter" class="border border-gray-300 rounded px-3 py-2">
+                        <option value="">All Packages</option>
+                        
+                        <option value="analyzer">analyzer</option>
+                        
+                        <option value="">.</option>
+                        
+                        <option value="reporter">reporter</option>
+                        
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="cohesion-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('cohesion-table', 0)">Package<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 1)">Struct Name<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 2)">File Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 3)">LCOM4 Score<span class="sort-icon active">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                            <tr class="clickable-row green" data-package="analyzer" onclick="toggleDetails('struct-details-0')">
+                                <td class="font-medium">analyzer</td>
+                                <td>unionFind</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">1 📋</td>
+                            </tr>
+                            
+                            <tr id="struct-details-0" class="details-row" data-package="analyzer">
+                                <td colspan="4" class="px-6 py-4">
+                                    <div class="bg-white p-4 rounded border border-gray-200">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components (1 groups)</h4>
+                                        <p class="text-sm text-gray-600 mb-3">
+                                            This struct has 1 independent group(s). Lower is better (1 = ideal cohesion).
+                                        </p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            
+                                            <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                                                <h5 class="text-sm font-semibold text-gray-700 mb-2">Group 1</h5>
+                                                <ul class="text-sm text-gray-600 space-y-1">
+                                                    
+                                                    <li class="font-mono">• add</li>
+                                                    
+                                                    <li class="font-mono">• find</li>
+                                                    
+                                                    <li class="font-mono">• union</li>
+                                                    
+                                                    <li class="font-mono">• getComponents</li>
+                                                    
+                                                    <li class="font-mono">• parent</li>
+                                                    
+                                                    <li class="font-mono">• rank</li>
+                                                    
+                                                </ul>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-1')">
+                                <td class="font-medium">analyzer</td>
+                                <td>FunctionResult</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-2')">
+                                <td class="font-medium">analyzer</td>
+                                <td>Report</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-3')">
+                                <td class="font-medium">analyzer</td>
+                                <td>DiagnosticResult</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-4')">
+                                <td class="font-medium">analyzer</td>
+                                <td>PackageResult</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-5')">
+                                <td class="font-medium">analyzer</td>
+                                <td>StructResult</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/types.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-6')">
+                                <td class="font-medium">analyzer</td>
+                                <td>methodInfo</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-7')">
+                                <td class="font-medium">analyzer</td>
+                                <td>ParsedPackage</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-8')">
+                                <td class="font-medium">analyzer</td>
+                                <td>PackageDependency</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="analyzer" onclick="toggleDetails('struct-details-9')">
+                                <td class="font-medium">analyzer</td>
+                                <td>CouplingMetrics</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="reporter" onclick="toggleDetails('struct-details-10')">
+                                <td class="font-medium">reporter</td>
+                                <td>TemplateData</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="reporter" onclick="toggleDetails('struct-details-11')">
+                                <td class="font-medium">reporter</td>
+                                <td>Summary</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="reporter" onclick="toggleDetails('struct-details-12')">
+                                <td class="font-medium">reporter</td>
+                                <td>StructWithPackage</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                            <tr class="clickable-row red" data-package="reporter" onclick="toggleDetails('struct-details-13')">
+                                <td class="font-medium">reporter</td>
+                                <td>FunctionWithPackage</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">0</td>
+                            </tr>
+                            
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            
+            <div id="complexity" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Function Cyclomatic Complexity</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>Cyclomatic Complexity:</strong> Measures the number of independent paths through a function<br>
+                    Lower scores are better: 1-10 is simple, 11-15 is moderate, 16+ is complex and should be refactored
+                </p>
+                <div class="mb-4">
+                    <label class="text-sm font-medium text-gray-700 mr-2">Filter by Package:</label>
+                    <select id="function-package-filter" class="border border-gray-300 rounded px-3 py-2">
+                        <option value="">All Packages</option>
+                        
+                        <option value="analyzer">analyzer</option>
+                        
+                        <option value="">.</option>
+                        
+                        <option value="reporter">reporter</option>
+                        
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="complexity-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('complexity-table', 0)">Package<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 1)">Function Name<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 2)">File Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 3)">Complexity<span class="sort-icon active">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                            <tr class="red" data-package="">
+                                <td class="font-medium">main</td>
+                                <td>main</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go</td>
+                                <td class="font-semibold">16</td>
+                            </tr>
+                            
+                            <tr class="yellow" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>calculateFunctionComplexity</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/complexity.go</td>
+                                <td class="font-semibold">14</td>
+                            </tr>
+                            
+                            <tr class="yellow" data-package="reporter">
+                                <td class="font-medium">reporter</td>
+                                <td>prepareTemplateData</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">13</td>
+                            </tr>
+                            
+                            <tr class="yellow" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>parsePackages</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go</td>
+                                <td class="font-semibold">12</td>
+                            </tr>
+                            
+                            <tr class="yellow" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>extractMethods</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">11</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="reporter">
+                                <td class="font-medium">reporter</td>
+                                <td>GenerateHTMLReport</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/reporter.go</td>
+                                <td class="font-semibold">10</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>detectAmbiguousStructs</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/diagnostics.go</td>
+                                <td class="font-semibold">10</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>CalculateComplexity</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/complexity.go</td>
+                                <td class="font-semibold">10</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>buildDependencyGraph</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go</td>
+                                <td class="font-semibold">9</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>CalculateCoupling</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go</td>
+                                <td class="font-semibold">7</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>calculateStructLCOM4</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">6</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>findUsedFields</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">6</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>detectGodObjects</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/diagnostics.go</td>
+                                <td class="font-semibold">5</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>extractFields</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>ExtractImports</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/coupling.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>Analyze</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>unionFind.union</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="">
+                                <td class="font-medium">main</td>
+                                <td>generateHTML</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>determineProjectPrefix</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/analyzer.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="">
+                                <td class="font-medium">main</td>
+                                <td>generateJSON</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>detectComplexFunctions</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/diagnostics.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>CalculateLCOM4</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>detectUnstableFoundations</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/diagnostics.go</td>
+                                <td class="font-semibold">4</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>unionFind.getComponents</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">3</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="reporter">
+                                <td class="font-medium">reporter</td>
+                                <td>GenerateJSONReport</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/reporter/json.go</td>
+                                <td class="font-semibold">3</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="">
+                                <td class="font-medium">main</td>
+                                <td>printSummary</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go</td>
+                                <td class="font-semibold">2</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>unionFind.add</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">2</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>unionFind.find</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">2</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>PerformDiagnostics</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/diagnostics.go</td>
+                                <td class="font-semibold">1</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="">
+                                <td class="font-medium">main</td>
+                                <td>printUsage</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/main.go</td>
+                                <td class="font-semibold">1</td>
+                            </tr>
+                            
+                            <tr class="green" data-package="analyzer">
+                                <td class="font-medium">analyzer</td>
+                                <td>newUnionFind</td>
+                                <td class="text-gray-600 text-sm">/Users/hiroki.yamauchi/private/go-code-health-analyzer/analyzer/lcom4.go</td>
+                                <td class="font-semibold">1</td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('tab-active'));
+                button.classList.add('tab-active');
+
+                
+                document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        
+        document.getElementById('struct-package-filter').addEventListener('change', (e) => {
+            const selectedPackage = e.target.value;
+            const rows = document.querySelectorAll('#cohesion-table tbody tr');
+
+            rows.forEach(row => {
+                if (selectedPackage === '' || row.getAttribute('data-package') === selectedPackage) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        
+        document.getElementById('function-package-filter').addEventListener('change', (e) => {
+            const selectedPackage = e.target.value;
+            const rows = document.querySelectorAll('#complexity-table tbody tr');
+
+            rows.forEach(row => {
+                if (selectedPackage === '' || row.getAttribute('data-package') === selectedPackage) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const header = table.querySelectorAll('th')[columnIndex];
+            const isNumeric = columnIndex >= 2; 
+
+            
+            const currentDirection = header.getAttribute('data-sort-dir') || 'desc';
+            const newDirection = currentDirection === 'desc' ? 'asc' : 'desc';
+
+            
+            table.querySelectorAll('.sort-icon').forEach(icon => icon.classList.remove('active'));
+            header.querySelector('.sort-icon').classList.add('active');
+            header.querySelector('.sort-icon').textContent = newDirection === 'desc' ? '▼' : '▲';
+            header.setAttribute('data-sort-dir', newDirection);
+
+            
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent.trim();
+                const bVal = b.cells[columnIndex].textContent.trim();
+
+                let comparison = 0;
+                if (isNumeric) {
+                    comparison = parseFloat(aVal) - parseFloat(bVal);
+                } else {
+                    comparison = aVal.localeCompare(bVal);
+                }
+
+                return newDirection === 'desc' ? -comparison : comparison;
+            });
+
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        
+        function toggleDetails(rowId) {
+            const detailsRow = document.getElementById(rowId);
+            if (detailsRow) {
+                detailsRow.classList.toggle('show');
+            }
+        }
+
+        
+        document.querySelectorAll('#coupling-table tbody tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const packagePath = row.getAttribute('data-package');
+
+                
+                document.getElementById('struct-package-filter').value = packagePath;
+                document.getElementById('struct-package-filter').dispatchEvent(new Event('change'));
+
+                
+                document.getElementById('function-package-filter').value = packagePath;
+                document.getElementById('function-package-filter').dispatchEvent(new Event('change'));
+
+                
+                document.querySelector('.tab-button[data-tab="cohesion"]').click();
+            });
+        });
+    </script>
+</body>
+</html>

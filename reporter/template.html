@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Code Health Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .green { background-color: #d1fae5; }
+        .yellow { background-color: #fef3c7; }
+        .red { background-color: #fee2e2; }
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+        .section { display: none; }
+        .section.active { display: block; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background-color: #f9fafb; font-weight: 600; cursor: pointer; user-select: none; }
+        th:hover { background-color: #f3f4f6; }
+        tr:hover { background-color: #f9fafb; }
+        .sort-icon { margin-left: 5px; opacity: 0.3; }
+        .sort-icon.active { opacity: 1; }
+        .clickable-row { cursor: pointer; }
+        .details-row { display: none; background-color: #f9fafb; }
+        .details-row.show { display: table-row; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Go Code Health Report</h1>
+            <p class="text-gray-600">Comprehensive code quality analysis including LCOM4, Cyclomatic Complexity, and Coupling metrics</p>
+        </header>
+
+        <!-- Summary Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Summary</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">{{.Summary.TotalPackages}}</div>
+                    <div class="text-sm text-gray-600">Packages</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">{{.Summary.TotalStructs}}</div>
+                    <div class="text-sm text-gray-600">Structs</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600">{{.Summary.TotalFunctions}}</div>
+                    <div class="text-sm text-gray-600">Functions</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold {{if gt .Summary.CriticalIssues 0}}text-red-600{{else}}text-green-600{{end}}">{{.Summary.CriticalIssues}}</div>
+                    <div class="text-sm text-gray-600">Critical Issues</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold {{if gt .Summary.WarningIssues 0}}text-yellow-600{{else}}text-green-600{{end}}">{{.Summary.WarningIssues}}</div>
+                    <div class="text-sm text-gray-600">Warnings</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">{{.Summary.HighLCOM4Count}}</div>
+                    <div class="text-sm text-gray-600">High LCOM4 (>2)</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">{{.Summary.HighComplexityCount}}</div>
+                    <div class="text-sm text-gray-600">High Complexity (>15)</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-600">{{.Summary.HighInstabilityCount}}</div>
+                    <div class="text-sm text-gray-600">High Instability (>0.7)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-md mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="flex">
+                    <button class="tab-button px-6 py-4 tab-active" data-tab="diagnostics">Diagnostics</button>
+                    <button class="tab-button px-6 py-4" data-tab="coupling">Package Coupling</button>
+                    <button class="tab-button px-6 py-4" data-tab="cohesion">Struct Cohesion (LCOM4)</button>
+                    <button class="tab-button px-6 py-4" data-tab="complexity">Function Complexity</button>
+                </nav>
+            </div>
+
+            <!-- Diagnostics Section -->
+            <div id="diagnostics" class="section active p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Code Health Diagnostics</h2>
+                <p class="text-gray-600 mb-4">
+                    Integrated analysis results detecting anti-patterns and code smells by combining multiple metrics.
+                </p>
+                {{if eq (len .Diagnostics) 0}}
+                <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-green-700 font-medium">
+                                No critical issues detected! Your codebase looks healthy.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {{else}}
+                <div class="space-y-4">
+                    {{range .Diagnostics}}
+                    <div class="border-l-4 {{if eq .Severity "Critical"}}border-red-500 bg-red-50{{else}}border-yellow-500 bg-yellow-50{{end}} p-4 rounded">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                {{if eq .Severity "Critical"}}
+                                <svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                {{else}}
+                                <svg class="h-6 w-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{end}}
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-lg font-semibold {{if eq .Severity "Critical"}}text-red-800{{else}}text-yellow-800{{end}}">
+                                    {{.Type}}: {{.TargetName}}
+                                </h3>
+                                <p class="mt-2 text-sm {{if eq .Severity "Critical"}}text-red-700{{else}}text-yellow-700{{end}}">
+                                    {{.Message}}
+                                </p>
+                                <div class="mt-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium {{if eq .Severity "Critical"}}bg-red-100 text-red-800{{else}}bg-yellow-100 text-yellow-800{{end}}">
+                                        {{.Severity}}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Coupling Section -->
+            <div id="coupling" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Package Coupling</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>Ca (Afferent Coupling):</strong> Number of packages that depend on this package<br>
+                    <strong>Ce (Efferent Coupling):</strong> Number of packages this package depends on<br>
+                    <strong>Instability (I):</strong> Ce / (Ca + Ce) - measures how stable a package is
+                </p>
+                <div class="overflow-x-auto">
+                    <table id="coupling-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('coupling-table', 0)" data-sort-dir="asc">Package Name<span class="sort-icon active">▲</span></th>
+                                <th onclick="sortTable('coupling-table', 1)">Package Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 2)">Ca<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 3)">Ce<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 4)">Instability<span class="sort-icon">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .PackageResults}}
+                            <tr class="{{instabilityClass .Instability}}" data-package="{{.Path}}">
+                                <td class="font-medium">{{.Name}}</td>
+                                <td class="text-gray-600">{{.Path}}</td>
+                                <td>{{.Afferent}}</td>
+                                <td>{{.Efferent}}</td>
+                                <td>{{printf "%.3f" .Instability}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Cohesion Section -->
+            <div id="cohesion" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Struct Cohesion (LCOM4)</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>LCOM4:</strong> Lack of Cohesion of Methods - measures how well the responsibilities of a struct are focused<br>
+                    Lower scores are better: 1 is ideal, higher values indicate the struct may have multiple responsibilities
+                </p>
+                <div class="mb-4">
+                    <label class="text-sm font-medium text-gray-700 mr-2">Filter by Package:</label>
+                    <select id="struct-package-filter" class="border border-gray-300 rounded px-3 py-2">
+                        <option value="">All Packages</option>
+                        {{range .PackageResults}}
+                        <option value="{{.Path}}">{{if .Path}}{{.Path}}{{else}}.{{end}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="cohesion-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('cohesion-table', 0)">Package<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 1)">Struct Name<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 2)">File Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('cohesion-table', 3)">LCOM4 Score<span class="sort-icon active">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range $i, $s := .StructResults}}
+                            <tr class="clickable-row {{lcom4Class $s.LCOM4Score}}" data-package="{{$s.PackagePath}}" onclick="toggleDetails('struct-details-{{$i}}')">
+                                <td class="font-medium">{{$s.PackageName}}</td>
+                                <td>{{$s.StructName}}</td>
+                                <td class="text-gray-600 text-sm">{{$s.FilePath}}</td>
+                                <td class="font-semibold">{{$s.LCOM4Score}}{{if gt (len $s.ComponentDetails) 0}} 📋{{end}}</td>
+                            </tr>
+                            {{if gt (len $s.ComponentDetails) 0}}
+                            <tr id="struct-details-{{$i}}" class="details-row" data-package="{{$s.PackagePath}}">
+                                <td colspan="4" class="px-6 py-4">
+                                    <div class="bg-white p-4 rounded border border-gray-200">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components ({{len $s.ComponentDetails}} groups)</h4>
+                                        <p class="text-sm text-gray-600 mb-3">
+                                            This struct has {{len $s.ComponentDetails}} independent group(s). Lower is better (1 = ideal cohesion).
+                                        </p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {{range $j, $component := $s.ComponentDetails}}
+                                            <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                                                <h5 class="text-sm font-semibold text-gray-700 mb-2">Group {{add $j 1}}</h5>
+                                                <ul class="text-sm text-gray-600 space-y-1">
+                                                    {{range $component}}
+                                                    <li class="font-mono">• {{.}}</li>
+                                                    {{end}}
+                                                </ul>
+                                            </div>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{end}}
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Complexity Section -->
+            <div id="complexity" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Function Cyclomatic Complexity</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>Cyclomatic Complexity:</strong> Measures the number of independent paths through a function<br>
+                    Lower scores are better: 1-10 is simple, 11-15 is moderate, 16+ is complex and should be refactored
+                </p>
+                <div class="mb-4">
+                    <label class="text-sm font-medium text-gray-700 mr-2">Filter by Package:</label>
+                    <select id="function-package-filter" class="border border-gray-300 rounded px-3 py-2">
+                        <option value="">All Packages</option>
+                        {{range .PackageResults}}
+                        <option value="{{.Path}}">{{if .Path}}{{.Path}}{{else}}.{{end}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="complexity-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('complexity-table', 0)">Package<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 1)">Function Name<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 2)">File Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 3)">Complexity<span class="sort-icon active">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .FunctionResults}}
+                            <tr class="{{complexityClass .Complexity}}" data-package="{{.PackagePath}}">
+                                <td class="font-medium">{{.PackageName}}</td>
+                                <td>{{.FuncName}}</td>
+                                <td class="text-gray-600 text-sm">{{.FilePath}}</td>
+                                <td class="font-semibold">{{.Complexity}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Update active tab
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('tab-active'));
+                button.classList.add('tab-active');
+
+                // Show selected section
+                document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Package filtering for structs
+        document.getElementById('struct-package-filter').addEventListener('change', (e) => {
+            const selectedPackage = e.target.value;
+            const rows = document.querySelectorAll('#cohesion-table tbody tr');
+
+            rows.forEach(row => {
+                if (selectedPackage === '' || row.getAttribute('data-package') === selectedPackage) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Package filtering for functions
+        document.getElementById('function-package-filter').addEventListener('change', (e) => {
+            const selectedPackage = e.target.value;
+            const rows = document.querySelectorAll('#complexity-table tbody tr');
+
+            rows.forEach(row => {
+                if (selectedPackage === '' || row.getAttribute('data-package') === selectedPackage) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Table sorting
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const header = table.querySelectorAll('th')[columnIndex];
+            const isNumeric = columnIndex >= 2; // Numeric columns
+
+            // Determine sort direction
+            const currentDirection = header.getAttribute('data-sort-dir') || 'desc';
+            const newDirection = currentDirection === 'desc' ? 'asc' : 'desc';
+
+            // Update sort icons
+            table.querySelectorAll('.sort-icon').forEach(icon => icon.classList.remove('active'));
+            header.querySelector('.sort-icon').classList.add('active');
+            header.querySelector('.sort-icon').textContent = newDirection === 'desc' ? '▼' : '▲';
+            header.setAttribute('data-sort-dir', newDirection);
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent.trim();
+                const bVal = b.cells[columnIndex].textContent.trim();
+
+                let comparison = 0;
+                if (isNumeric) {
+                    comparison = parseFloat(aVal) - parseFloat(bVal);
+                } else {
+                    comparison = aVal.localeCompare(bVal);
+                }
+
+                return newDirection === 'desc' ? -comparison : comparison;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Toggle details row
+        function toggleDetails(rowId) {
+            const detailsRow = document.getElementById(rowId);
+            if (detailsRow) {
+                detailsRow.classList.toggle('show');
+            }
+        }
+
+        // Click on package name to filter other tables
+        document.querySelectorAll('#coupling-table tbody tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const packagePath = row.getAttribute('data-package');
+
+                // Update struct filter
+                document.getElementById('struct-package-filter').value = packagePath;
+                document.getElementById('struct-package-filter').dispatchEvent(new Event('change'));
+
+                // Update function filter
+                document.getElementById('function-package-filter').value = packagePath;
+                document.getElementById('function-package-filter').dispatchEvent(new Event('change'));
+
+                // Switch to cohesion tab
+                document.querySelector('.tab-button[data-tab="cohesion"]').click();
+            });
+        });
+    </script>
+</body>
+</html>

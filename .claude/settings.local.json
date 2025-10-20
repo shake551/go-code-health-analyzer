@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod init github.com/hiroki-yamauchi/go-code-health-analyzer)",
+      "Bash(mkdir -p analyzer reporter)",
+      "Bash(go mod tidy)",
+      "Bash(go build -o go-code-health-analyzer)",
+      "Bash(./go-code-health-analyzer .)",
+      "Bash(tree -L 2 -I 'go-code-health-analyzer|code_health_report.html' .)",
+      "Bash(./go-code-health-analyzer --help)",
+      "Bash(./go-code-health-analyzer)",
+      "Bash(./go-code-health-analyzer -format json .)",
+      "Bash(./go-code-health-analyzer -format both .)",
+      "Bash(./go-code-health-analyzer -format json -output custom_report.json .)",
+      "Bash(./go-code-health-analyzer -h)",
+      "Bash(cat custom_report.json)",
+      "Bash(./go-code-health-analyzer -format json -output test_no_exclude.json test_exclude)",
+      "Bash(./go-code-health-analyzer -format json -exclude \"excluded_dir\" -output test_with_exclude.json test_exclude)",
+      "Bash(./go-code-health-analyzer -exclude \"reporter\" -format json -output test_exclude_reporter.json .)",
+      "Bash(./go-code-health-analyzer -exclude \"reporter,analyzer\" .)",
+      "Bash(./go-code-health-analyzer -format json -exclude \"hoge/fuga\" -output test_nested_path.json test_nested)",
+      "Bash(./go-code-health-analyzer -format json -exclude \"hoge/fuga\" -output test_nested_fixed.json test_nested)",
+      "Bash(./go-code-health-analyzer -format json -exclude \"hoge\" -output test_nested_hoge.json test_nested)",
+      "Bash(./go-code-health-analyzer -format json -exclude \"hoge/fuga,another/deep/path\" -output test_multiple_nested.json test_nested)",
+      "Read(//Users/hiroki.yamauchi/private/go-lcom/**)",
+      "Bash(./go-code-health-analyzer -format json -output new_lcom.json .)",
+      "Bash(cat new_lcom.json)",
+      "Bash(./go-lcom -format json .)",
+      "Bash(./go-lcom .)",
+      "Bash(cat lcom4_report.html)",
+      "Bash(./go-code-health-analyzer -format json -output diagnostics_test.json .)",
+      "Bash(cat diagnostics_test.json)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
