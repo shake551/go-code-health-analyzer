@@ -78,3 +78,75 @@ func ExtractImports(pkg *ast.Package) []string {
 
 	return imports
 }
+
+// CalculateDependencyDepth calculates the maximum depth of the internal dependency chain for each package
+func CalculateDependencyDepth(pkgDeps map[string]*PackageDependency, projectPrefix string) map[string]int {
+	depths := make(map[string]int)
+	visited := make(map[string]bool)
+	inProgress := make(map[string]bool)
+
+	// Create mapping from full import path to relative path
+	fullToRelPath := make(map[string]string)
+	for pkgPath := range pkgDeps {
+		fullPath := projectPrefix
+		if pkgPath != "" {
+			fullPath = projectPrefix + "/" + pkgPath
+		}
+		fullToRelPath[fullPath] = pkgPath
+	}
+
+	// DFS to calculate depth for each package
+	var dfs func(pkgPath string) int
+	dfs = func(pkgPath string) int {
+		// If already calculated, return cached result
+		if visited[pkgPath] {
+			return depths[pkgPath]
+		}
+
+		// Detect circular dependencies
+		if inProgress[pkgPath] {
+			return 0
+		}
+
+		inProgress[pkgPath] = true
+		maxDepth := 0
+
+		// Get dependencies for this package
+		dep := pkgDeps[pkgPath]
+		if dep != nil {
+			// Only consider internal dependencies (within the project)
+			for _, importPath := range dep.Imports {
+				if strings.HasPrefix(importPath, projectPrefix) {
+					// Convert full import path to relative path
+					if relPath, exists := fullToRelPath[importPath]; exists {
+						childDepth := dfs(relPath)
+						if childDepth > maxDepth {
+							maxDepth = childDepth
+						}
+					}
+				}
+			}
+		}
+
+		// Depth is 1 + max depth of dependencies
+		if maxDepth > 0 || (dep != nil && len(dep.Imports) > 0) {
+			depths[pkgPath] = maxDepth + 1
+		} else {
+			depths[pkgPath] = 0 // No internal dependencies
+		}
+
+		visited[pkgPath] = true
+		inProgress[pkgPath] = false
+
+		return depths[pkgPath]
+	}
+
+	// Calculate depth for each package
+	for pkgPath := range pkgDeps {
+		if !visited[pkgPath] {
+			dfs(pkgPath)
+		}
+	}
+
+	return depths
+}

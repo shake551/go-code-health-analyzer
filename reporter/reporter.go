@@ -47,6 +47,17 @@ func GenerateHTMLReport(report *analyzer.Report, outputPath string) error {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"ge": func(a, b interface{}) bool {
+			// Handle both int and float64 comparisons
+			switch v := a.(type) {
+			case int:
+				return float64(v) >= toFloat64(b)
+			case float64:
+				return v >= toFloat64(b)
+			default:
+				return false
+			}
+		},
 	}).Parse(htmlTemplate)
 
 	if err != nil {
@@ -82,6 +93,7 @@ type Summary struct {
 	TotalPackages        int
 	TotalStructs         int
 	TotalFunctions       int
+	TotalLoC             int // Total lines of code
 	HighLCOM4Count       int // LCOM4 > 2
 	HighComplexityCount  int // Complexity > 15
 	HighInstabilityCount int // Instability > 0.7
@@ -151,6 +163,7 @@ func prepareTemplateData(report *analyzer.Report) TemplateData {
 		TotalPackages:  len(report.Packages),
 		TotalStructs:   len(structs),
 		TotalFunctions: len(functions),
+		TotalLoC:       report.TotalLoC,
 	}
 
 	for _, s := range structs {
@@ -187,4 +200,16 @@ func prepareTemplateData(report *analyzer.Report) TemplateData {
 	data.FunctionResults = functions
 
 	return data
+}
+
+// toFloat64 converts an interface to float64
+func toFloat64(i interface{}) float64 {
+	switch v := i.(type) {
+	case int:
+		return float64(v)
+	case float64:
+		return v
+	default:
+		return 0
+	}
 }
