@@ -10,16 +10,32 @@ import (
 
 // AnalyzeFieldMatrix analyzes method×field usage patterns using matrix analysis and PCA
 func AnalyzeFieldMatrix(structName string, structType *ast.StructType, file *ast.File, fset *token.FileSet, fields []string) *FieldMatrixAnalysis {
-	// Skip analysis if too few fields (PCA unstable)
+	// Return empty result if too few fields (PCA unstable)
 	if len(fields) < 3 {
-		return nil
+		return &FieldMatrixAnalysis{
+			Matrix:                      [][]int{},
+			MethodNames:                 []string{},
+			FieldNames:                  fields,
+			EstimatedClusters:           0,
+			ExplainedVariance:           []float64{},
+			HasMultipleResponsibilities: false,
+			Recommendations:             "Not enough fields for PCA analysis (minimum 3 required).",
+		}
 	}
 
 	// Extract methods and their field usage
 	methods := extractMethodsWithFieldsWeighted(structName, file, fields)
 
 	if len(methods) == 0 {
-		return nil
+		return &FieldMatrixAnalysis{
+			Matrix:                      [][]int{},
+			MethodNames:                 []string{},
+			FieldNames:                  fields,
+			EstimatedClusters:           0,
+			ExplainedVariance:           []float64{},
+			HasMultipleResponsibilities: false,
+			Recommendations:             "No methods found for analysis.",
+		}
 	}
 
 	// Filter out getter/setter methods
@@ -32,7 +48,15 @@ func AnalyzeFieldMatrix(structName string, structType *ast.StructType, file *ast
 
 	if len(filteredMethods) < 2 {
 		// Not enough data for meaningful analysis
-		return nil
+		return &FieldMatrixAnalysis{
+			Matrix:                      [][]int{},
+			MethodNames:                 []string{},
+			FieldNames:                  fields,
+			EstimatedClusters:           0,
+			ExplainedVariance:           []float64{},
+			HasMultipleResponsibilities: false,
+			Recommendations:             "Not enough non-utility methods for analysis (minimum 2 required).",
+		}
 	}
 
 	// Build weighted usage matrix
@@ -40,7 +64,15 @@ func AnalyzeFieldMatrix(structName string, structType *ast.StructType, file *ast
 
 	if len(matrix) < 2 || len(matrix[0]) < 3 {
 		// Not enough data for meaningful analysis
-		return nil
+		return &FieldMatrixAnalysis{
+			Matrix:                      matrix,
+			MethodNames:                 methodNames,
+			FieldNames:                  fields,
+			EstimatedClusters:           0,
+			ExplainedVariance:           []float64{},
+			HasMultipleResponsibilities: false,
+			Recommendations:             "Insufficient data for meaningful PCA analysis.",
+		}
 	}
 
 	// Perform PCA to estimate number of clusters

@@ -14,7 +14,12 @@ func AnalyzeMethodClustering(structName string, structType *ast.StructType, file
 	methods := extractAllMethods(structName, file)
 
 	if len(methods) == 0 {
-		return nil
+		return &MethodClusterAnalysis{
+			TotalPrivateMethods: 0,
+			ClusterCount:        0,
+			Clusters:            []MethodCluster{},
+			HasMultipleIslands:  false,
+		}
 	}
 
 	// Separate private and public methods
@@ -29,9 +34,14 @@ func AnalyzeMethodClustering(structName string, structType *ast.StructType, file
 		}
 	}
 
-	// If no private methods, no clustering analysis needed
+	// If no private methods, return empty result
 	if len(privateMethods) == 0 {
-		return nil
+		return &MethodClusterAnalysis{
+			TotalPrivateMethods: 0,
+			ClusterCount:        0,
+			Clusters:            []MethodCluster{},
+			HasMultipleIslands:  false,
+		}
 	}
 
 	// Build call graph between private methods only
