@@ -35,10 +35,40 @@ type PackageResult struct {
 
 // StructResult represents the LCOM4 analysis results for a single struct
 type StructResult struct {
-	StructName       string     `json:"struct_name"`       // Name of the struct
-	FilePath         string     `json:"file_path"`         // Source file path
-	LCOM4Score       int        `json:"lcom4_score"`       // LCOM4 score (number of connected components)
-	ComponentDetails [][]string `json:"component_details"` // Details of each connected component
+	StructName       string                `json:"struct_name"`        // Name of the struct
+	FilePath         string                `json:"file_path"`          // Source file path
+	LCOM4Score       int                   `json:"lcom4_score"`        // LCOM4 score (number of connected components)
+	ComponentDetails [][]string            `json:"component_details"`  // Details of each connected component
+	MethodClusters   *MethodClusterAnalysis `json:"method_clusters,omitempty"`   // Private method clustering analysis
+	FieldMatrix      *FieldMatrixAnalysis   `json:"field_matrix,omitempty"`      // Method×Field usage matrix analysis
+}
+
+// MethodClusterAnalysis represents the result of private method call graph clustering
+type MethodClusterAnalysis struct {
+	TotalPrivateMethods int                `json:"total_private_methods"` // Total number of private methods
+	ClusterCount        int                `json:"cluster_count"`         // Number of detected method clusters (islands)
+	Clusters            []MethodCluster    `json:"clusters"`              // Details of each cluster
+	HasMultipleIslands  bool               `json:"has_multiple_islands"`  // True if >= 2 clusters exist
+}
+
+// MethodCluster represents a single cluster of related private methods
+type MethodCluster struct {
+	ID              int      `json:"id"`               // Cluster ID
+	Methods         []string `json:"methods"`          // Method names in this cluster
+	Size            int      `json:"size"`             // Number of methods in cluster
+	CalledBy        []string `json:"called_by"`        // Public methods that call into this cluster
+	ResponsibilityHint string `json:"responsibility_hint"` // Suggested responsibility name based on method names
+}
+
+// FieldMatrixAnalysis represents the result of Method×Field usage matrix analysis with PCA
+type FieldMatrixAnalysis struct {
+	Matrix              [][]int  `json:"matrix"`                // Method×Field usage matrix (1=used, 0=not used)
+	MethodNames         []string `json:"method_names"`          // Method names (rows)
+	FieldNames          []string `json:"field_names"`           // Field names (columns)
+	EstimatedClusters   int      `json:"estimated_clusters"`    // Estimated number of responsibility clusters via PCA
+	ExplainedVariance   []float64 `json:"explained_variance"`   // Variance explained by each principal component
+	HasMultipleResponsibilities bool `json:"has_multiple_responsibilities"` // True if estimated clusters >= 2
+	Recommendations     string   `json:"recommendations"`       // Human-readable recommendations
 }
 
 // FunctionResult represents the cyclomatic complexity analysis results for a single function

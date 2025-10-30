@@ -18,6 +18,12 @@ func PerformDiagnostics(packages []PackageResult) []DiagnosticResult {
 	// Detect Ambiguous Structs
 	diagnostics = append(diagnostics, detectAmbiguousStructs(packages)...)
 
+	// Detect Split Responsibilities via Method Islands
+	diagnostics = append(diagnostics, detectMethodIslands(packages)...)
+
+	// Detect Split Responsibilities via Field Clustering
+	diagnostics = append(diagnostics, detectFieldClusters(packages)...)
+
 	return diagnostics
 }
 
@@ -168,6 +174,99 @@ func detectAmbiguousStructs(packages []PackageResult) []DiagnosticResult {
 					RelatedPath: fmt.Sprintf("#struct-%s-%s", pkg.Path, s.StructName),
 				})
 			}
+		}
+	}
+
+	return results
+}
+
+// detectMethodIslands detects structs with multiple isolated private method clusters
+// Criteria: MethodClusters.HasMultipleIslands == true (>= 2 clusters)
+func detectMethodIslands(packages []PackageResult) []DiagnosticResult {
+	var results []DiagnosticResult
+
+	for _, pkg := range packages {
+		for _, s := range pkg.Structs {
+			if s.MethodClusters == nil || !s.MethodClusters.HasMultipleIslands {
+				continue
+			}
+
+			mc := s.MethodClusters
+
+			// Build cluster summary
+			clusterSummary := ""
+			for i, cluster := range mc.Clusters {
+				if i > 0 {
+					clusterSummary += "; "
+				}
+				clusterSummary += fmt.Sprintf("Cluster %d (%d methods): %s",
+					cluster.ID, cluster.Size, cluster.ResponsibilityHint)
+			}
+
+			results = append(results, DiagnosticResult{
+				Type:       "Split Responsibility (Method Islands)",
+				TargetName: fmt.Sprintf("%s.%s", pkg.Name, s.StructName),
+				Message: fmt.Sprintf(
+					"Struct '%s' has %d isolated groups of private methods, suggesting %d distinct responsibilities. "+
+						"Private methods that don't call each other likely serve different purposes. "+
+						"Clusters: %s. Consider splitting into separate structs.",
+					s.StructName, mc.ClusterCount, mc.ClusterCount, clusterSummary,
+				),
+				Severity: "Warning",
+				Evidence: map[string]interface{}{
+					"cluster_count":         mc.ClusterCount,
+					"total_private_methods": mc.TotalPrivateMethods,
+					"clusters":              mc.Clusters,
+					"package":               pkg.Name,
+					"file_path":             s.FilePath,
+				},
+				RelatedPath: fmt.Sprintf("#struct-%s-%s", pkg.Path, s.StructName),
+			})
+		}
+	}
+
+	return results
+}
+
+// detectFieldClusters detects structs with multiple responsibility clusters via PCA
+// Criteria: FieldMatrix.HasMultipleResponsibilities == true (estimated clusters >= 2)
+func detectFieldClusters(packages []PackageResult) []DiagnosticResult {
+	var results []DiagnosticResult
+
+	for _, pkg := range packages {
+		for _, s := range pkg.Structs {
+			if s.FieldMatrix == nil || !s.FieldMatrix.HasMultipleResponsibilities {
+				continue
+			}
+
+			fm := s.FieldMatrix
+
+			// Determine severity based on number of clusters and variance
+			severity := "Warning"
+			if fm.EstimatedClusters >= 3 {
+				severity = "Critical"
+			}
+
+			results = append(results, DiagnosticResult{
+				Type:       "Split Responsibility (Field Clusters)",
+				TargetName: fmt.Sprintf("%s.%s", pkg.Name, s.StructName),
+				Message: fmt.Sprintf(
+					"Struct '%s' shows %d distinct responsibility patterns in method-field usage (PCA analysis). "+
+						"%s",
+					s.StructName, fm.EstimatedClusters, fm.Recommendations,
+				),
+				Severity: severity,
+				Evidence: map[string]interface{}{
+					"estimated_clusters": fm.EstimatedClusters,
+					"explained_variance": fm.ExplainedVariance,
+					"method_count":       len(fm.MethodNames),
+					"field_count":        len(fm.FieldNames),
+					"package":            pkg.Name,
+					"file_path":          s.FilePath,
+					"recommendations":    fm.Recommendations,
+				},
+				RelatedPath: fmt.Sprintf("#struct-%s-%s", pkg.Path, s.StructName),
+			})
 		}
 	}
 

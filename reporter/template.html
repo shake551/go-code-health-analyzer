@@ -288,23 +288,130 @@
                             {{if gt (len $s.ComponentDetails) 0}}
                             <tr id="struct-details-{{$i}}" class="details-row" data-package="{{$s.PackagePath}}">
                                 <td colspan="4" class="px-6 py-4">
-                                    <div class="bg-white p-4 rounded border border-gray-200">
-                                        <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components ({{len $s.ComponentDetails}} groups)</h4>
-                                        <p class="text-sm text-gray-600 mb-3">
-                                            This struct has {{len $s.ComponentDetails}} independent group(s). Lower is better (1 = ideal cohesion).
-                                        </p>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {{range $j, $component := $s.ComponentDetails}}
-                                            <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                                                <h5 class="text-sm font-semibold text-gray-700 mb-2">Group {{add $j 1}}</h5>
-                                                <ul class="text-sm text-gray-600 space-y-1">
-                                                    {{range $component}}
-                                                    <li class="font-mono">• {{.}}</li>
+                                    <div class="bg-white p-4 rounded border border-gray-200 space-y-6">
+                                        <!-- LCOM4 Connected Components -->
+                                        <div>
+                                            <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components ({{len $s.ComponentDetails}} groups)</h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                This struct has {{len $s.ComponentDetails}} independent group(s). Lower is better (1 = ideal cohesion).
+                                            </p>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {{range $j, $component := $s.ComponentDetails}}
+                                                <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                                                    <h5 class="text-sm font-semibold text-gray-700 mb-2">Group {{add $j 1}}</h5>
+                                                    <ul class="text-sm text-gray-600 space-y-1">
+                                                        {{range $component}}
+                                                        <li class="font-mono">• {{.}}</li>
+                                                        {{end}}
+                                                    </ul>
+                                                </div>
+                                                {{end}}
+                                            </div>
+                                        </div>
+
+                                        <!-- Method Clustering Analysis -->
+                                        {{if $s.MethodClusters}}
+                                        <div class="border-t pt-6">
+                                            <h4 class="text-md font-semibold text-gray-800 mb-2">
+                                                🔍 Method Islands Analysis
+                                                {{if $s.MethodClusters.HasMultipleIslands}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">⚠ Multiple Islands Detected</span>
+                                                {{else}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">✓ Single Island</span>
+                                                {{end}}
+                                            </h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                Private method call graph analysis: {{$s.MethodClusters.TotalPrivateMethods}} private methods grouped into {{$s.MethodClusters.ClusterCount}} cluster(s).
+                                                {{if $s.MethodClusters.HasMultipleIslands}}
+                                                <br><strong class="text-yellow-700">Multiple isolated clusters suggest this struct has multiple responsibilities.</strong>
+                                                {{end}}
+                                            </p>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {{range $s.MethodClusters.Clusters}}
+                                                <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                                                    <h5 class="text-sm font-semibold text-blue-900 mb-2">
+                                                        Cluster {{.ID}} ({{.Size}} methods)
+                                                        <span class="ml-2 text-xs text-blue-700">{{.ResponsibilityHint}}</span>
+                                                    </h5>
+                                                    <ul class="text-xs text-gray-700 space-y-1 mb-2">
+                                                        {{range .Methods}}
+                                                        <li class="font-mono">• {{.}}</li>
+                                                        {{end}}
+                                                    </ul>
+                                                    {{if gt (len .CalledBy) 0}}
+                                                    <div class="text-xs text-gray-600 mt-2 pt-2 border-t border-blue-200">
+                                                        <strong>Called by:</strong>
+                                                        {{range $i, $caller := .CalledBy}}
+                                                        {{if $i}}, {{end}}<span class="font-mono">{{$caller}}</span>
+                                                        {{end}}
+                                                    </div>
                                                     {{end}}
-                                                </ul>
+                                                </div>
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+
+                                        <!-- Field Matrix Analysis -->
+                                        {{if $s.FieldMatrix}}
+                                        <div class="border-t pt-6">
+                                            <h4 class="text-md font-semibold text-gray-800 mb-2">
+                                                📊 Field Usage Matrix (PCA Analysis)
+                                                {{if $s.FieldMatrix.HasMultipleResponsibilities}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded">⚠ {{$s.FieldMatrix.EstimatedClusters}} Responsibility Clusters</span>
+                                                {{else}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">✓ Cohesive</span>
+                                                {{end}}
+                                            </h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                Analysis of {{len $s.FieldMatrix.MethodNames}} methods × {{len $s.FieldMatrix.FieldNames}} fields usage patterns.
+                                                {{if $s.FieldMatrix.HasMultipleResponsibilities}}
+                                                <br><strong class="text-red-700">PCA detected {{$s.FieldMatrix.EstimatedClusters}} distinct responsibility patterns.</strong>
+                                                {{end}}
+                                            </p>
+                                            {{if gt (len $s.FieldMatrix.ExplainedVariance) 0}}
+                                            <div class="mb-3 text-xs text-gray-700">
+                                                <strong>Explained Variance:</strong>
+                                                {{range $i, $var := $s.FieldMatrix.ExplainedVariance}}
+                                                {{if lt $i 5}}
+                                                PC{{add $i 1}}: {{printf "%.1f%%" (mul $var 100)}}
+                                                {{if lt $i 4}} | {{end}}
+                                                {{end}}
+                                                {{end}}
                                             </div>
                                             {{end}}
+                                            <div class="bg-purple-50 p-3 rounded border border-purple-200">
+                                                <p class="text-sm text-gray-700">{{$s.FieldMatrix.Recommendations}}</p>
+                                            </div>
+                                            <details class="mt-3">
+                                                <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">View Usage Matrix</summary>
+                                                <div class="mt-2 overflow-x-auto">
+                                                    <table class="min-w-full text-xs border border-gray-300">
+                                                        <thead class="bg-gray-100">
+                                                            <tr>
+                                                                <th class="px-2 py-1 border border-gray-300">Method</th>
+                                                                {{range $s.FieldMatrix.FieldNames}}
+                                                                <th class="px-2 py-1 border border-gray-300 font-mono">{{.}}</th>
+                                                                {{end}}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {{range $i, $method := $s.FieldMatrix.MethodNames}}
+                                                            <tr>
+                                                                <td class="px-2 py-1 border border-gray-300 font-mono bg-gray-50">{{$method}}</td>
+                                                                {{range index $s.FieldMatrix.Matrix $i}}
+                                                                <td class="px-2 py-1 border border-gray-300 text-center {{if eq . 1}}bg-green-100{{else}}bg-gray-50{{end}}">
+                                                                    {{if eq . 1}}✓{{else}}-{{end}}
+                                                                </td>
+                                                                {{end}}
+                                                            </tr>
+                                                            {{end}}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </details>
                                         </div>
+                                        {{end}}
                                     </div>
                                 </td>
                             </tr>

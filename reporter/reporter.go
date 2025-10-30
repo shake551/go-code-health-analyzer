@@ -47,6 +47,9 @@ func GenerateHTMLReport(report *analyzer.Report, outputPath string) error {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"mul": func(a, b float64) float64 {
+			return a * b
+		},
 		"ge": func(a, b interface{}) bool {
 			// Handle both int and float64 comparisons
 			switch v := a.(type) {

@@ -75,11 +75,20 @@ func calculateStructLCOM4(structName string, structType *ast.StructType, file *a
 	// Count connected components
 	components := uf.getComponents()
 
+	// Perform advanced analyses
+	// 1. Method clustering analysis (private method call graph)
+	methodClusters := AnalyzeMethodClustering(structName, structType, file, fset)
+
+	// 2. Field matrix analysis (method×field usage with PCA)
+	fieldMatrix := AnalyzeFieldMatrix(structName, structType, file, fset, fields)
+
 	return StructResult{
 		StructName:       structName,
 		FilePath:         fileName,
 		LCOM4Score:       len(components),
 		ComponentDetails: components,
+		MethodClusters:   methodClusters,
+		FieldMatrix:      fieldMatrix,
 	}
 }
 
