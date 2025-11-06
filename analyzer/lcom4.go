@@ -42,6 +42,13 @@ func calculateStructLCOM4(structName string, structType *ast.StructType, file *a
 	// Extract methods and their field usage
 	methods := extractMethods(structName, file, fields)
 
+	// Perform advanced analyses (always, even if no methods)
+	// 1. Method clustering analysis (private method call graph)
+	methodClusters := AnalyzeMethodClustering(structName, structType, file, fset)
+
+	// 2. Field matrix analysis (method×field usage with PCA)
+	fieldMatrix := AnalyzeFieldMatrix(structName, structType, file, fset, fields)
+
 	// If no methods, LCOM4 is 0
 	if len(methods) == 0 {
 		return StructResult{
@@ -49,6 +56,8 @@ func calculateStructLCOM4(structName string, structType *ast.StructType, file *a
 			FilePath:         fileName,
 			LCOM4Score:       0,
 			ComponentDetails: [][]string{},
+			MethodClusters:   methodClusters,
+			FieldMatrix:      fieldMatrix,
 		}
 	}
 
@@ -80,6 +89,8 @@ func calculateStructLCOM4(structName string, structType *ast.StructType, file *a
 		FilePath:         fileName,
 		LCOM4Score:       len(components),
 		ComponentDetails: components,
+		MethodClusters:   methodClusters,
+		FieldMatrix:      fieldMatrix,
 	}
 }
 

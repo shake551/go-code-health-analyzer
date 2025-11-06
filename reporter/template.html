@@ -34,7 +34,7 @@
         <!-- Summary Section -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Summary</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4">
                 <div class="text-center">
                     <div class="text-3xl font-bold text-blue-600">{{.Summary.TotalPackages}}</div>
                     <div class="text-sm text-gray-600">Packages</div>
@@ -46,6 +46,10 @@
                 <div class="text-center">
                     <div class="text-3xl font-bold text-blue-600">{{.Summary.TotalFunctions}}</div>
                     <div class="text-sm text-gray-600">Functions</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-purple-600">{{.Summary.TotalLoC}}</div>
+                    <div class="text-sm text-gray-600">Total LoC</div>
                 </div>
                 <div class="text-center">
                     <div class="text-3xl font-bold {{if gt .Summary.CriticalIssues 0}}text-red-600{{else}}text-green-600{{end}}">{{.Summary.CriticalIssues}}</div>
@@ -78,6 +82,7 @@
                     <button class="tab-button px-6 py-4" data-tab="coupling">Package Coupling</button>
                     <button class="tab-button px-6 py-4" data-tab="cohesion">Struct Cohesion (LCOM4)</button>
                     <button class="tab-button px-6 py-4" data-tab="complexity">Function Complexity</button>
+                    <button class="tab-button px-6 py-4" data-tab="metrics">Code Metrics (LoC)</button>
                 </nav>
             </div>
 
@@ -144,7 +149,9 @@
                 <p class="text-gray-600 mb-4">
                     <strong>Ca (Afferent Coupling):</strong> Number of packages that depend on this package<br>
                     <strong>Ce (Efferent Coupling):</strong> Number of packages this package depends on<br>
-                    <strong>Instability (I):</strong> Ce / (Ca + Ce) - measures how stable a package is
+                    <strong>Instability (I):</strong> Ce / (Ca + Ce) - measures how stable a package is<br>
+                    <strong>Dependency Depth:</strong> Maximum depth of internal dependency chain (0 = no internal dependencies)<br>
+                    <strong>Tip:</strong> Click on a package row to see function-level dependency details
                 </p>
                 <div class="overflow-x-auto">
                     <table id="coupling-table">
@@ -155,17 +162,89 @@
                                 <th onclick="sortTable('coupling-table', 2)">Ca<span class="sort-icon">▼</span></th>
                                 <th onclick="sortTable('coupling-table', 3)">Ce<span class="sort-icon">▼</span></th>
                                 <th onclick="sortTable('coupling-table', 4)">Instability<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('coupling-table', 5)">Dependency Depth<span class="sort-icon">▼</span></th>
+                                <th>Functions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{range .PackageResults}}
-                            <tr class="{{instabilityClass .Instability}}" data-package="{{.Path}}">
-                                <td class="font-medium">{{.Name}}</td>
-                                <td class="text-gray-600">{{.Path}}</td>
-                                <td>{{.Afferent}}</td>
-                                <td>{{.Efferent}}</td>
-                                <td>{{printf "%.3f" .Instability}}</td>
+                            {{range $i, $pkg := .PackageResults}}
+                            <tr class="clickable-row {{instabilityClass $pkg.Instability}}" data-package="{{$pkg.Path}}" onclick="toggleDetails('package-details-{{$i}}')">
+                                <td class="font-medium">{{$pkg.Name}}</td>
+                                <td class="text-gray-600">{{$pkg.Path}}</td>
+                                <td>{{$pkg.Afferent}}</td>
+                                <td>{{$pkg.Efferent}}</td>
+                                <td>{{printf "%.3f" $pkg.Instability}}</td>
+                                <td class="{{if ge $pkg.DependencyDepth 4}}red{{else if ge $pkg.DependencyDepth 2}}yellow{{else}}green{{end}}">{{$pkg.DependencyDepth}}</td>
+                                <td class="text-center">{{if gt (len $pkg.Functions) 0}}{{len $pkg.Functions}} 📋{{else}}0{{end}}</td>
                             </tr>
+                            {{if gt (len $pkg.Functions) 0}}
+                            <tr id="package-details-{{$i}}" class="details-row" data-package="{{$pkg.Path}}">
+                                <td colspan="7" class="px-6 py-4">
+                                    <div class="bg-white p-4 rounded border border-gray-200">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-3">Function-level Coupling ({{len $pkg.Functions}} functions)</h4>
+                                        <p class="text-sm text-gray-600 mb-3">
+                                            <strong>Ca (Afferent):</strong> Number of functions within this package that call this function<br>
+                                            <strong>Ce (Efferent):</strong> Number of external packages this function depends on<br>
+                                            <strong>Instability (I):</strong> Ce / (Ca + Ce) - Lower is more stable
+                                        </p>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Function</th>
+                                                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700">Ca</th>
+                                                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700">Ce</th>
+                                                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700">Instability</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Internal Deps</th>
+                                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">External Deps</th>
+                                                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700">Complexity</th>
+                                                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700">LoC</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    {{range $pkg.Functions}}
+                                                    <tr class="hover:bg-gray-50">
+                                                        <td class="px-4 py-2 text-sm font-mono">{{.FuncName}}</td>
+                                                        <td class="px-4 py-2 text-sm text-center">{{.Afferent}}</td>
+                                                        <td class="px-4 py-2 text-sm text-center">{{.Efferent}}</td>
+                                                        <td class="px-4 py-2 text-sm text-center">
+                                                            <span class="{{if ge .Instability 0.7}}text-red-600 font-semibold{{else if ge .Instability 0.3}}text-yellow-600{{else}}text-green-600{{end}}">
+                                                                {{printf "%.2f" .Instability}}
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-4 py-2 text-sm">
+                                                            {{if gt (len .InternalDeps) 0}}
+                                                            <div class="flex flex-wrap gap-1">
+                                                                {{range .InternalDeps}}
+                                                                <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{.}}</span>
+                                                                {{end}}
+                                                            </div>
+                                                            {{else}}
+                                                            <span class="text-gray-400">-</span>
+                                                            {{end}}
+                                                        </td>
+                                                        <td class="px-4 py-2 text-sm">
+                                                            {{if gt (len .ExternalDeps) 0}}
+                                                            <div class="flex flex-wrap gap-1">
+                                                                {{range .ExternalDeps}}
+                                                                <span class="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">{{.}}</span>
+                                                                {{end}}
+                                                            </div>
+                                                            {{else}}
+                                                            <span class="text-gray-400">-</span>
+                                                            {{end}}
+                                                        </td>
+                                                        <td class="px-4 py-2 text-sm text-center">{{.Complexity}}</td>
+                                                        <td class="px-4 py-2 text-sm text-center">{{.LoC}}</td>
+                                                    </tr>
+                                                    {{end}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{end}}
                             {{end}}
                         </tbody>
                     </table>
@@ -209,21 +288,143 @@
                             {{if gt (len $s.ComponentDetails) 0}}
                             <tr id="struct-details-{{$i}}" class="details-row" data-package="{{$s.PackagePath}}">
                                 <td colspan="4" class="px-6 py-4">
-                                    <div class="bg-white p-4 rounded border border-gray-200">
-                                        <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components ({{len $s.ComponentDetails}} groups)</h4>
-                                        <p class="text-sm text-gray-600 mb-3">
-                                            This struct has {{len $s.ComponentDetails}} independent group(s). Lower is better (1 = ideal cohesion).
-                                        </p>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {{range $j, $component := $s.ComponentDetails}}
-                                            <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                                                <h5 class="text-sm font-semibold text-gray-700 mb-2">Group {{add $j 1}}</h5>
-                                                <ul class="text-sm text-gray-600 space-y-1">
-                                                    {{range $component}}
-                                                    <li class="font-mono">• {{.}}</li>
-                                                    {{end}}
-                                                </ul>
+                                    <div class="bg-white p-4 rounded border border-gray-200 space-y-6">
+                                        <!-- LCOM4 Connected Components -->
+                                        <div>
+                                            <h4 class="text-md font-semibold text-gray-800 mb-3">Connected Components ({{len $s.ComponentDetails}} groups)</h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                This struct has {{len $s.ComponentDetails}} independent group(s). Lower is better (1 = ideal cohesion).
+                                            </p>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {{range $j, $component := $s.ComponentDetails}}
+                                                <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                                                    <h5 class="text-sm font-semibold text-gray-700 mb-2">Group {{add $j 1}}</h5>
+                                                    <ul class="text-sm text-gray-600 space-y-1">
+                                                        {{range $component}}
+                                                        <li class="font-mono">• {{.}}</li>
+                                                        {{end}}
+                                                    </ul>
+                                                </div>
+                                                {{end}}
                                             </div>
+                                        </div>
+
+                                        <!-- Method Clustering Analysis -->
+                                        <div class="border-t pt-6">
+                                            <h4 class="text-md font-semibold text-gray-800 mb-2">
+                                                🔍 Method Islands Analysis
+                                                {{if $s.MethodClusters.HasMultipleIslands}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">⚠ Multiple Islands Detected</span>
+                                                {{else if gt $s.MethodClusters.TotalPrivateMethods 0}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">✓ Single Island</span>
+                                                {{else}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">- No Private Methods</span>
+                                                {{end}}
+                                            </h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                {{if gt $s.MethodClusters.TotalPrivateMethods 0}}
+                                                Private method call graph analysis: {{$s.MethodClusters.TotalPrivateMethods}} private methods grouped into {{$s.MethodClusters.ClusterCount}} cluster(s).
+                                                {{if $s.MethodClusters.HasMultipleIslands}}
+                                                <br><strong class="text-yellow-700">Multiple isolated clusters suggest this struct has multiple responsibilities.</strong>
+                                                {{end}}
+                                                {{else}}
+                                                No private methods found for call graph analysis.
+                                                {{end}}
+                                            </p>
+                                            {{if gt (len $s.MethodClusters.Clusters) 0}}
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {{range $s.MethodClusters.Clusters}}
+                                                <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                                                    <h5 class="text-sm font-semibold text-blue-900 mb-2">
+                                                        Cluster {{.ID}} ({{.Size}} methods)
+                                                        <span class="ml-2 text-xs text-blue-700">{{.ResponsibilityHint}}</span>
+                                                    </h5>
+                                                    <ul class="text-xs text-gray-700 space-y-1 mb-2">
+                                                        {{range .Methods}}
+                                                        <li class="font-mono">• {{.}}</li>
+                                                        {{end}}
+                                                    </ul>
+                                                    {{if gt (len .CalledBy) 0}}
+                                                    <div class="text-xs text-gray-600 mt-2 pt-2 border-t border-blue-200">
+                                                        <strong>Called by:</strong>
+                                                        {{range $i, $caller := .CalledBy}}
+                                                        {{if $i}}, {{end}}<span class="font-mono">{{$caller}}</span>
+                                                        {{end}}
+                                                    </div>
+                                                    {{end}}
+                                                </div>
+                                                {{end}}
+                                            </div>
+                                            {{end}}
+                                        </div>
+
+                                        <!-- Field Matrix Analysis -->
+                                        <div class="border-t pt-6">
+                                            <h4 class="text-md font-semibold text-gray-800 mb-2">
+                                                📊 Field Usage Matrix (PCA Analysis)
+                                                {{if $s.FieldMatrix.HasMultipleResponsibilities}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded">⚠ {{$s.FieldMatrix.EstimatedClusters}} Responsibility Clusters</span>
+                                                {{else if gt (len $s.FieldMatrix.MethodNames) 0}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">✓ Cohesive</span>
+                                                {{else}}
+                                                <span class="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">- No Analysis Available</span>
+                                                {{end}}
+                                            </h4>
+                                            <p class="text-sm text-gray-600 mb-3">
+                                                {{if gt (len $s.FieldMatrix.MethodNames) 0}}
+                                                Analysis of {{len $s.FieldMatrix.MethodNames}} methods × {{len $s.FieldMatrix.FieldNames}} fields usage patterns.
+                                                {{if $s.FieldMatrix.HasMultipleResponsibilities}}
+                                                <br><strong class="text-red-700">PCA detected {{$s.FieldMatrix.EstimatedClusters}} distinct responsibility patterns.</strong>
+                                                {{end}}
+                                                {{else}}
+                                                {{$s.FieldMatrix.Recommendations}}
+                                                {{end}}
+                                            </p>
+                                            {{if gt (len $s.FieldMatrix.ExplainedVariance) 0}}
+                                            <div class="mb-3 text-xs text-gray-700">
+                                                <strong>Explained Variance:</strong>
+                                                {{range $i, $var := $s.FieldMatrix.ExplainedVariance}}
+                                                {{if lt $i 5}}
+                                                PC{{add $i 1}}: {{printf "%.1f%%" (mul $var 100)}}
+                                                {{if lt $i 4}} | {{end}}
+                                                {{end}}
+                                                {{end}}
+                                            </div>
+                                            {{end}}
+                                            {{if gt (len $s.FieldMatrix.MethodNames) 0}}
+                                            <div class="bg-purple-50 p-3 rounded border border-purple-200">
+                                                <p class="text-sm text-gray-700">{{$s.FieldMatrix.Recommendations}}</p>
+                                            </div>
+                                            {{end}}
+                                            {{if gt (len $s.FieldMatrix.Matrix) 0}}
+                                            <details class="mt-3">
+                                                <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">View Usage Matrix</summary>
+                                                <div class="mt-2 overflow-x-auto">
+                                                    <table class="min-w-full text-xs border border-gray-300">
+                                                        <thead class="bg-gray-100">
+                                                            <tr>
+                                                                <th class="px-2 py-1 border border-gray-300">Method</th>
+                                                                {{range $s.FieldMatrix.FieldNames}}
+                                                                <th class="px-2 py-1 border border-gray-300 font-mono">{{.}}</th>
+                                                                {{end}}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {{range $i, $method := $s.FieldMatrix.MethodNames}}
+                                                            <tr>
+                                                                <td class="px-2 py-1 border border-gray-300 font-mono bg-gray-50">{{$method}}</td>
+                                                                {{range index $s.FieldMatrix.Matrix $i}}
+                                                                <td class="px-2 py-1 border border-gray-300 text-center {{if eq . 3}}bg-blue-100{{else if eq . 2}}bg-yellow-100{{else if eq . 1}}bg-green-100{{else}}bg-gray-50{{end}}">
+                                                                    {{if eq . 3}}R+W{{else if eq . 2}}W{{else if eq . 1}}R{{else}}-{{end}}
+                                                                </td>
+                                                                {{end}}
+                                                            </tr>
+                                                            {{end}}
+                                                        </tbody>
+                                                    </table>
+                                                    <p class="text-xs text-gray-600 mt-2">Legend: R = Read, W = Write, R+W = Read & Write</p>
+                                                </div>
+                                            </details>
                                             {{end}}
                                         </div>
                                     </div>
@@ -241,7 +442,8 @@
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Function Cyclomatic Complexity</h2>
                 <p class="text-gray-600 mb-4">
                     <strong>Cyclomatic Complexity:</strong> Measures the number of independent paths through a function<br>
-                    Lower scores are better: 1-10 is simple, 11-15 is moderate, 16+ is complex and should be refactored
+                    <strong>LoC (Lines of Code):</strong> Number of lines in the function body<br>
+                    Lower scores are better: Complexity 1-10 is simple, 11-15 is moderate, 16+ is complex and should be refactored
                 </p>
                 <div class="mb-4">
                     <label class="text-sm font-medium text-gray-700 mr-2">Filter by Package:</label>
@@ -260,6 +462,7 @@
                                 <th onclick="sortTable('complexity-table', 1)">Function Name<span class="sort-icon">▼</span></th>
                                 <th onclick="sortTable('complexity-table', 2)">File Path<span class="sort-icon">▼</span></th>
                                 <th onclick="sortTable('complexity-table', 3)">Complexity<span class="sort-icon active">▼</span></th>
+                                <th onclick="sortTable('complexity-table', 4)">LoC<span class="sort-icon">▼</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -269,6 +472,44 @@
                                 <td>{{.FuncName}}</td>
                                 <td class="text-gray-600 text-sm">{{.FilePath}}</td>
                                 <td class="font-semibold">{{.Complexity}}</td>
+                                <td class="{{if ge .LoC 80}}red{{else if ge .LoC 50}}yellow{{else}}green{{end}}">{{.LoC}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Code Metrics Section -->
+            <div id="metrics" class="section p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Code Metrics (Lines of Code)</h2>
+                <p class="text-gray-600 mb-4">
+                    <strong>Total LoC:</strong> Total lines of code in the package (including comments and blank lines)<br>
+                    <strong>Avg Function LoC:</strong> Average lines of code per function<br>
+                    <strong>Function Count:</strong> Number of functions/methods in the package<br>
+                    <strong>File Count:</strong> Number of Go files in the package
+                </p>
+                <div class="overflow-x-auto">
+                    <table id="metrics-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('metrics-table', 0)" data-sort-dir="asc">Package Name<span class="sort-icon active">▲</span></th>
+                                <th onclick="sortTable('metrics-table', 1)">Package Path<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('metrics-table', 2)">Total LoC<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('metrics-table', 3)">Avg Function LoC<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('metrics-table', 4)">Function Count<span class="sort-icon">▼</span></th>
+                                <th onclick="sortTable('metrics-table', 5)">File Count<span class="sort-icon">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .PackageResults}}
+                            <tr data-package="{{.Path}}">
+                                <td class="font-medium">{{.Name}}</td>
+                                <td class="text-gray-600">{{.Path}}</td>
+                                <td class="{{if ge .TotalLoC 1000}}red{{else if ge .TotalLoC 500}}yellow{{else}}green{{end}}">{{.TotalLoC}}</td>
+                                <td class="{{if ge .AvgFuncLoC 50}}red{{else if ge .AvgFuncLoC 30}}yellow{{else}}green{{end}}">{{printf "%.1f" .AvgFuncLoC}}</td>
+                                <td>{{.FuncCount}}</td>
+                                <td>{{.FileCount}}</td>
                             </tr>
                             {{end}}
                         </tbody>
@@ -366,24 +607,6 @@
                 detailsRow.classList.toggle('show');
             }
         }
-
-        // Click on package name to filter other tables
-        document.querySelectorAll('#coupling-table tbody tr').forEach(row => {
-            row.addEventListener('click', () => {
-                const packagePath = row.getAttribute('data-package');
-
-                // Update struct filter
-                document.getElementById('struct-package-filter').value = packagePath;
-                document.getElementById('struct-package-filter').dispatchEvent(new Event('change'));
-
-                // Update function filter
-                document.getElementById('function-package-filter').value = packagePath;
-                document.getElementById('function-package-filter').dispatchEvent(new Event('change'));
-
-                // Switch to cohesion tab
-                document.querySelector('.tab-button[data-tab="cohesion"]').click();
-            });
-        });
     </script>
 </body>
 </html>

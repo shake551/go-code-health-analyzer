@@ -33,27 +33,54 @@ func Analyze(targetPath string, excludeDirs []string) (*Report, error) {
 	// Calculate coupling metrics
 	couplingMetrics := CalculateCoupling(pkgDeps, projectPrefix)
 
+	// Calculate dependency depth
+	depthMetrics := CalculateDependencyDepth(pkgDeps, projectPrefix)
+
 	// Generate report for each package
 	var packageResults []PackageResult
+	totalProjectLoC := 0
 
 	for pkgPath, pkg := range packages {
 		// Calculate LCOM4 for all structs
 		structs := CalculateLCOM4(pkg.Package, pkg.FileSet)
 
-		// Calculate cyclomatic complexity for all functions
-		functions := CalculateComplexity(pkg.Package, pkg.FileSet)
+		// Calculate cyclomatic complexity and LoC for all functions
+		functions := CalculateComplexity(pkg.Package, pkg.FileSet, projectPrefix)
+
+		// Calculate LoC for the package
+		pkgLoC := CalculateLoCForPackage(pkg.Package, pkg.FileSet)
+		totalProjectLoC += pkgLoC.TotalLoC
+
+		// Calculate derived metrics
+		funcCount := len(functions)
+		avgFuncLoC := 0.0
+		if funcCount > 0 {
+			totalFuncLoC := 0
+			for _, f := range functions {
+				totalFuncLoC += f.LoC
+			}
+			avgFuncLoC = float64(totalFuncLoC) / float64(funcCount)
+		}
 
 		// Get coupling metrics
 		coupling := couplingMetrics[pkgPath]
 
+		// Get dependency depth
+		depth := depthMetrics[pkgPath]
+
 		packageResults = append(packageResults, PackageResult{
-			Name:        pkg.Package.Name,
-			Path:        pkgPath,
-			Afferent:    coupling.Afferent,
-			Efferent:    coupling.Efferent,
-			Instability: coupling.Instability,
-			Structs:     structs,
-			Functions:   functions,
+			Name:            pkg.Package.Name,
+			Path:            pkgPath,
+			Afferent:        coupling.Afferent,
+			Efferent:        coupling.Efferent,
+			Instability:     coupling.Instability,
+			Structs:         structs,
+			Functions:       functions,
+			TotalLoC:        pkgLoC.TotalLoC,
+			AvgFuncLoC:      avgFuncLoC,
+			FuncCount:       funcCount,
+			FileCount:       pkgLoC.FileCount,
+			DependencyDepth: depth,
 		})
 	}
 
@@ -63,6 +90,7 @@ func Analyze(targetPath string, excludeDirs []string) (*Report, error) {
 	return &Report{
 		Diagnostics: diagnostics,
 		Packages:    packageResults,
+		TotalLoC:    totalProjectLoC,
 	}, nil
 }
 

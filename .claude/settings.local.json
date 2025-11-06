@@ -29,7 +29,9 @@
       "Bash(./go-lcom .)",
       "Bash(cat lcom4_report.html)",
       "Bash(./go-code-health-analyzer -format json -output diagnostics_test.json .)",
-      "Bash(cat diagnostics_test.json)"
+      "Bash(cat diagnostics_test.json)",
+      "Bash(cat:*)",
+      "Bash(./go-code-health-analyzer:*)"
     ],
     "deny": [],
     "ask": []
